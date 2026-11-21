@@ -1,0 +1,5 @@
+_target_: src.modules.tasks.Classification
+
+compile: false
+
+num_classes: ${data.num_classes}

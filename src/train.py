@@ -1,14 +1,18 @@
+from omegaconf import OmegaConf
 from typing import Any, Dict, List, Optional, Tuple
 
 import hydra
 import lightning as L
-import rootutils
-import torch
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig
 
+from torch import nn
+
+import rootutils
 rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
+
+from src.modules.tasks import Classification  # noqa
 # ------------------------------------------------------------------------------------ #
 # the setup_root above is equivalent to:
 # - adding project root dir to PYTHONPATH
@@ -34,7 +38,17 @@ from src.utils import (
     instantiate_loggers,
     log_hyperparameters,
     task_wrapper,
+)   # noqa
+
+
+OmegaConf.register_new_resolver(
+    "oneOf",
+    lambda node, *keys: next(node[k] for k in keys if k in node),
 )
+OmegaConf.register_new_resolver("eval", eval)
+
+# from src.models.components.simple_dense_net import SimpleDenseNet
+# torch.serialization.add_safe_globals([SimpleDenseNet])
 
 log = RankedLogger(__name__, rank_zero_only=True)
 
@@ -50,15 +64,30 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     :param cfg: A DictConfig configuration composed by Hydra.
     :return: A tuple with metrics and dict with all instantiated objects.
     """
-    # set seed for random number generators in pytorch, numpy and python.random
     if cfg.get("seed"):
         L.seed_everything(cfg.seed, workers=True)
 
     log.info(f"Instantiating datamodule <{cfg.data._target_}>")
     datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data)
 
-    log.info(f"Instantiating model <{cfg.model._target_}>")
-    model: LightningModule = hydra.utils.instantiate(cfg.model)
+    log.info(f"Instantiating backbone <{cfg.model.backbone._target_}>")
+    backbone: nn.Module = hydra.utils.instantiate(cfg.model.backbone)
+
+    log.info(f"Instantiating head <{cfg.model.head._target_}>")
+    head: nn.Module = hydra.utils.instantiate(cfg.model.head)
+
+    net = nn.Sequential(backbone, head)
+
+    log.info(f"Instantiating optimizer <{cfg.optimizer._target_}>")
+    optimizer = hydra.utils.instantiate(cfg.optimizer)
+
+    log.info(f"Instantiating scheduler <{cfg.scheduler._target_}>")
+    scheduler = hydra.utils.instantiate(cfg.scheduler)
+
+    log.info(f"Instantiating task <{cfg.task._target_}>")
+    module: LightningModule = hydra.utils.instantiate(
+        cfg.task, net=net, optimizer=optimizer, scheduler=scheduler
+    )
 
     log.info("Instantiating callbacks...")
     callbacks: List[Callback] = instantiate_callbacks(cfg.get("callbacks"))
@@ -67,12 +96,14 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     logger: List[Logger] = instantiate_loggers(cfg.get("logger"))
 
     log.info(f"Instantiating trainer <{cfg.trainer._target_}>")
-    trainer: Trainer = hydra.utils.instantiate(cfg.trainer, callbacks=callbacks, logger=logger)
+    trainer: Trainer = hydra.utils.instantiate(
+        cfg.trainer, callbacks=callbacks, logger=logger
+    )
 
     object_dict = {
         "cfg": cfg,
         "datamodule": datamodule,
-        "model": model,
+        "model": module,
         "callbacks": callbacks,
         "logger": logger,
         "trainer": trainer,
@@ -84,7 +115,8 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
     if cfg.get("train"):
         log.info("Starting training!")
-        trainer.fit(model=model, datamodule=datamodule, ckpt_path=cfg.get("ckpt_path"))
+        trainer.fit(model=module, datamodule=datamodule,
+                    ckpt_path=cfg.get("ckpt_path"))
 
     train_metrics = trainer.callback_metrics
 
@@ -92,9 +124,11 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         log.info("Starting testing!")
         ckpt_path = trainer.checkpoint_callback.best_model_path
         if ckpt_path == "":
-            log.warning("Best ckpt not found! Using current weights for testing...")
+            log.warning(
+                "Best ckpt not found! Using current weights for testing...")
             ckpt_path = None
-        trainer.test(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
+        trainer.test(model=module, datamodule=datamodule,
+                     ckpt_path=ckpt_path, weights_only=cfg.get("weights_only"))
         log.info(f"Best ckpt path: {ckpt_path}")
 
     test_metrics = trainer.callback_metrics
@@ -121,7 +155,8 @@ def main(cfg: DictConfig) -> Optional[float]:
 
     # safely retrieve metric value for hydra-based hyperparameter optimization
     metric_value = get_metric_value(
-        metric_dict=metric_dict, metric_name=cfg.get("optimized_metric")
+        metric_dict=metric_dict, metric_name=cfg.get(
+            "optimized_metric")
     )
 
     # return optimized metric

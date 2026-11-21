@@ -3,15 +3,18 @@
 # specify here default configuration
 # order of defaults determines the order in which configs override each other
 defaults:
-  - _self_
-  - data: mnist
-  - model: mnist
-  - callbacks: default
-  - logger: null # set logger here or use command line (e.g. `python train.py logger=tensorboard`)
-  - trainer: default
-  - paths: default
-  - extras: default
   - hydra: default
+  - extras: default
+  - paths: default
+  - logger: null
+  - callbacks: default
+  - trainer: default
+  - data: mnist
+  - task: classification
+  - optimizer: sgd
+  - scheduler: linear
+  - model: mnist
+  - _self_
 
   # experiment configs allow for version control of specific hyperparameters
   # e.g. best hyperparameters for given model and datamodule
@@ -41,7 +44,7 @@ train: True
 # evaluate on test set, using best model weights achieved during training
 # lightning chooses best weights based on the metric specified in checkpoint callback
 test: True
-
+weights_only: False # True by default
 # simply provide checkpoint path to resume training
 ckpt_path: null
 

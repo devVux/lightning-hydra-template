@@ -57,6 +57,24 @@ For example, you can't resume hydra-based multirun or hyperparameter search.
 
 ## Main Technologies
 
+## This fork's model layout
+
+Models are assembled from Hydra configs: `configs/model/` selects a backbone and
+head, while `configs/task/`, `configs/optimizer/`, and `configs/scheduler/`
+define the training behavior. Implement reusable PyTorch modules under
+`src/modules/`, add a config for each component, and select them from an
+experiment config. The included MNIST setup is a runnable example; adapt the
+datamodule and task for a new dataset or objective.
+
+For example, switch the baseline to the CNN backbone with:
+
+```bash
+python src/train.py model/backbone=cnn
+```
+
+The CNN uses adaptive pooling, so its classifier input size does not depend on
+the image resolution.
+
 [PyTorch Lightning](https://github.com/PyTorchLightning/pytorch-lightning) - a lightweight PyTorch wrapper for high-performance AI research. Think of it as a framework for organizing your PyTorch code.
 
 [Hydra](https://github.com/facebookresearch/hydra) - a framework for elegantly configuring complex applications. The key feature is the ability to dynamically create a hierarchical configuration by composition and override it through config files and the command line.

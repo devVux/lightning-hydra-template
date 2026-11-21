@@ -1,0 +1,6 @@
+_target_: src.modules.heads.linear.LinearHead
+compile: false
+
+in_features: 128
+out_features: 8
+

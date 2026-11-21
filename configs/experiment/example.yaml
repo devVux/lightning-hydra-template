@@ -6,13 +6,13 @@
 defaults:
   - override /data: mnist
   - override /model: mnist
-  - override /callbacks: default
-  - override /trainer: default
+  - override /model/backbone: cnn
+  - _self_
 
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
 
-tags: ["mnist", "simple_dense_net"]
+tags: ["mnist", "cnn"]
 
 seed: 12345
 
@@ -22,13 +22,13 @@ trainer:
   gradient_clip_val: 0.5
 
 model:
-  optimizer:
-    lr: 0.002
-  net:
-    lin1_size: 128
-    lin2_size: 256
-    lin3_size: 64
-  compile: false
+  backbone:
+    in_channels: ${data.channels}
+    out_channels: 64
+  head:
+    in_features: 64
+    out_features: ${data.num_classes}
+
 
 data:
   batch_size: 64
