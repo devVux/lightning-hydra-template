@@ -19,7 +19,11 @@ class LinearBlock(nn.Module):
             nn.Dropout(dropout),
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Float[torch.Tensor, "batch in_features"]) -> Float[torch.Tensor, "batch out_features"]:
+        if x.ndim != 2 or x.shape[-1] != self.net[0].in_features:
+            raise ValueError(
+                f"LinearBlock expected shape (batch, {self.net[0].in_features}), got {tuple(x.shape)}"
+            )
         return self.net(x)
 
 
@@ -41,6 +45,11 @@ class ConvBlock(nn.Module):
             nn.AvgPool2d(pool_size),
         )
 
-    def forward(self, x: Float[torch.Tensor, 'batch channel height width']) -> Float[torch.Tensor, 'batch out_features']:
+    def forward(self, x: Float[torch.Tensor, "batch in_channels height width"]) -> Float[torch.Tensor, "batch out_channels height width"]:
+        conv = self.net[0]
+        if x.ndim != 4 or x.shape[1] != conv.in_channels:
+            raise ValueError(
+                f"ConvBlock expected BCHW input with {conv.in_channels} channels, got {tuple(x.shape)}"
+            )
 
         return self.net(x)

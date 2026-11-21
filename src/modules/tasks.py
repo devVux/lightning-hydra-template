@@ -74,6 +74,20 @@ class Classification(LightningModule):
         """
         x, y = batch
         logits = self.forward(x)
+        if logits.ndim != 2 or logits.shape[1] != self.hparams.num_classes:
+            raise ValueError(
+                f"Classification expected logits shaped (batch, {self.hparams.num_classes}), got {tuple(logits.shape)}"
+            )
+        if y.ndim != 1 or y.shape[0] != logits.shape[0]:
+            raise ValueError(
+                f"Classification expected one label per sample with shape ({logits.shape[0]},), got {tuple(y.shape)}"
+            )
+        if y.dtype != torch.long:
+            raise ValueError(f"Classification labels must use torch.long, got {y.dtype}")
+        if torch.any((y < 0) | (y >= self.hparams.num_classes)):
+            raise ValueError(
+                f"Classification labels must be in [0, {self.hparams.num_classes - 1}]"
+            )
         loss = self.criterion(logits, y)
         preds = torch.argmax(logits, dim=1)
         return loss, preds, y
