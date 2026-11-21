@@ -8,4 +8,4 @@ backbone:
 
 head:
   in_features: ${model.backbone.out_features}
-  out_features: ${oneOf:${task},out_features,num_classes}
+  out_features: ${oneOf:${task},out_features,num_classes,num_outputs}

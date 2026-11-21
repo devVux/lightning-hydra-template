@@ -1,0 +1,4 @@
+_target_: src.modules.tasks.Regression
+
+compile: false
+num_outputs: 1

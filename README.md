@@ -66,6 +66,14 @@ define the training behavior. Implement reusable PyTorch modules under
 experiment config. The included MNIST setup is a runnable example; adapt the
 datamodule and task for a new dataset or objective.
 
+Backbones take a batched tensor and return a two-dimensional `(batch, features)`
+tensor. Heads take those features and return `(batch, outputs)`; classification
+uses one output logit per class, while regression uses one or more numeric
+outputs. `Classification` and `Regression` share optimizer and scheduler setup
+through `TaskModule`; add another task module when the loss or batch contract
+differs. Scheduler configs may set `monitor` for metric-driven schedulers such
+as `ReduceLROnPlateau`; ordinary schedulers leave it null.
+
 For example, switch the baseline to the CNN backbone with:
 
 ```bash

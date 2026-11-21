@@ -7,12 +7,9 @@ from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig
 
-from torch import nn
-
 import rootutils
 rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 
-from src.modules.tasks import Classification  # noqa
 # ------------------------------------------------------------------------------------ #
 # the setup_root above is equivalent to:
 # - adding project root dir to PYTHONPATH
@@ -39,6 +36,7 @@ from src.utils import (
     log_hyperparameters,
     task_wrapper,
 )   # noqa
+from src.utils.model_factory import instantiate_task
 
 
 OmegaConf.register_new_resolver(
@@ -70,24 +68,8 @@ def train(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     log.info(f"Instantiating datamodule <{cfg.data._target_}>")
     datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data)
 
-    log.info(f"Instantiating backbone <{cfg.model.backbone._target_}>")
-    backbone: nn.Module = hydra.utils.instantiate(cfg.model.backbone)
-
-    log.info(f"Instantiating head <{cfg.model.head._target_}>")
-    head: nn.Module = hydra.utils.instantiate(cfg.model.head)
-
-    net = nn.Sequential(backbone, head)
-
-    log.info(f"Instantiating optimizer <{cfg.optimizer._target_}>")
-    optimizer = hydra.utils.instantiate(cfg.optimizer)
-
-    log.info(f"Instantiating scheduler <{cfg.scheduler._target_}>")
-    scheduler = hydra.utils.instantiate(cfg.scheduler)
-
     log.info(f"Instantiating task <{cfg.task._target_}>")
-    module: LightningModule = hydra.utils.instantiate(
-        cfg.task, net=net, optimizer=optimizer, scheduler=scheduler
-    )
+    module: LightningModule = instantiate_task(cfg)
 
     log.info("Instantiating callbacks...")
     callbacks: List[Callback] = instantiate_callbacks(cfg.get("callbacks"))

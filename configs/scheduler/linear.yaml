@@ -1,5 +1,6 @@
 _target_: torch.optim.lr_scheduler.LinearLR
 _partial_: true
+monitor: null # set a metric name only for schedulers such as ReduceLROnPlateau
 
 start_factor: 0.333
 end_factor: 1

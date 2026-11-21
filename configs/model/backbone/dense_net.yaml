@@ -1,6 +1,7 @@
 _target_: src.modules.backbones.dense_net.DenseNet
 compile: false
 
+# Accepts any batched input flattened to in_features; returns (batch, out_features).
 in_features: 784
 hidden_features: 256
 out_features: 128

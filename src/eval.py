@@ -6,7 +6,6 @@ from omegaconf import OmegaConf
 from lightning import LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig
-from torch import nn
 
 rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 # ------------------------------------------------------------------------------------ #
@@ -33,6 +32,7 @@ from src.utils import (
     log_hyperparameters,
     task_wrapper,
 )
+from src.utils.model_factory import instantiate_task
 
 OmegaConf.register_new_resolver(
     "oneOf", lambda node, *keys: next(node[k] for k in keys if k in node)
@@ -57,16 +57,8 @@ def evaluate(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     log.info(f"Instantiating datamodule <{cfg.data._target_}>")
     datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data)
 
-    log.info(f"Instantiating backbone <{cfg.model.backbone._target_}>")
-    backbone: nn.Module = hydra.utils.instantiate(cfg.model.backbone)
-    log.info(f"Instantiating head <{cfg.model.head._target_}>")
-    head: nn.Module = hydra.utils.instantiate(cfg.model.head)
-    net = nn.Sequential(backbone, head)
-    optimizer = hydra.utils.instantiate(cfg.optimizer)
-    scheduler = hydra.utils.instantiate(cfg.scheduler)
-    model: LightningModule = hydra.utils.instantiate(
-        cfg.task, net=net, optimizer=optimizer, scheduler=scheduler
-    )
+    log.info(f"Instantiating task <{cfg.task._target_}>")
+    model: LightningModule = instantiate_task(cfg)
 
     log.info("Instantiating loggers...")
     logger: List[Logger] = instantiate_loggers(cfg.get("logger"))

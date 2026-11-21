@@ -1,6 +1,7 @@
 _target_: src.modules.heads.linear.LinearHead
 compile: false
 
+# Accepts (batch, in_features) and returns (batch, out_features).
 in_features: 128
 out_features: 8
 
