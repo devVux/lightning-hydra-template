@@ -1,5 +1,4 @@
 _target_: src.modules.backbones.cnn.CNN
 
-# Input is BCHW. Adaptive pooling returns (batch, out_channels), independent of H/W.
 in_channels: 1
 out_channels: 64
