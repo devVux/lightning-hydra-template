@@ -27,12 +27,16 @@ class DenseNet(nn.Module):
 
     def forward(self, x: Float[torch.Tensor, "batch *features"]) -> Float[torch.Tensor, "batch out_features"]:
         if x.ndim < 2:
-            raise ValueError(f"DenseNet expects a batch dimension and features, got shape {tuple(x.shape)}")
+            raise ValueError(
+                f"DenseNet expects a batch dimension and features, got shape {tuple(x.shape)}")
         batch_size = x.size()[0]
 
         x = x.view(batch_size, -1)
+
         expected = self.model[0].net[0].in_features
+
         if x.shape[1] != expected:
-            raise ValueError(f"DenseNet expected {expected} input features per sample, got {x.shape[1]}")
+            raise ValueError(
+                f"DenseNet expected {expected} input features per sample, got {x.shape[1]}")
 
         return self.model(x)
